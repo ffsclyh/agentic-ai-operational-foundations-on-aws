@@ -1,5 +1,141 @@
 # CX Agent Backend Architecture
 
+## Directory Structure Analysis
+
+```
+cx-agent-backend/
+├── cx_agent_backend/
+│   ├── __init__.py                    # Package initialization & logging config
+│   ├── __main__.py                    # Application entry point
+│   ├── server.py                      # FastAPI application factory
+│   │
+│   ├── domain/                        # Domain Layer (Business Logic)
+│   │   ├── entities/
+│   │   │   └── conversation.py        # Core business entities
+│   │   ├── repositories/
+│   │   │   └── conversation_repository.py  # Data access interfaces
+│   │   └── services/
+│   │       ├── conversation_service.py     # Business logic orchestration
+│   │       ├── agent_service.py           # Agent processing interface
+│   │       ├── guardrail_service.py       # Content safety interface
+│   │       └── llm_service.py             # LLM communication interface
+│   │
+│   ├── infrastructure/                # Infrastructure Layer (External Concerns)
+│   │   ├── adapters/
+│   │   │   ├── langgraph_agent_service.py      # LangGraph implementation
+│   │   │   ├── bedrock_guardrail_service.py    # AWS Guardrails implementation
+│   │   │   ├── openai_llm_service.py           # OpenAI-compatible LLM client
+│   │   │   ├── memory_conversation_repository.py # In-memory data storage
+│   │   │   └── tools/                          # Agent tools (KB, web search, etc.)
+│   │   ├── config/
+│   │   │   ├── settings.py            # Application configuration
+│   │   │   └── container.py           # Dependency injection setup
+│   │   └── aws/
+│   │       ├── secret_reader.py       # AWS Secrets Manager client
+│   │       └── parameter_store_reader.py # AWS Parameter Store client
+│   │
+│   └── presentation/                  # Presentation Layer (API Interface)
+│       ├── api/
+│       │   └── conversation_router.py # REST API endpoints
+│       └── schemas/
+│           └── conversation_schemas.py # Request/response models
+│
+├── pyproject.toml                     # Project dependencies & build config
+├── uv.lock                           # Dependency lock file
+└── Dockerfile                        # Container configuration
+```
+
+### **Layer-by-Layer Analysis**
+
+#### **Domain Layer** (`domain/`)
+**Purpose**: Contains pure business logic, independent of external frameworks
+
+**Entities** (`entities/`):
+- `conversation.py`: Core business objects (Conversation, Message, enums)
+- Immutable value objects with business rules
+- No external dependencies
+
+**Repositories** (`repositories/`):
+- `conversation_repository.py`: Abstract data access interface
+- Defines contracts without implementation details
+- Enables dependency inversion
+
+**Services** (`services/`):
+- `conversation_service.py`: Orchestrates business workflows
+- `agent_service.py`: Abstract agent processing interface
+- `guardrail_service.py`: Content safety validation interface
+- `llm_service.py`: Language model communication interface
+
+#### **Infrastructure Layer** (`infrastructure/`)
+**Purpose**: Handles external system integrations and technical concerns
+
+**Adapters** (`adapters/`):
+- `langgraph_agent_service.py`: LangGraph-based agent implementation
+- `bedrock_guardrail_service.py`: AWS Bedrock Guardrails integration
+- `openai_llm_service.py`: OpenAI-compatible API client
+- `memory_conversation_repository.py`: In-memory storage implementation
+- `tools/`: Agent tools for knowledge base, web search, ticketing
+
+**Configuration** (`config/`):
+- `settings.py`: Pydantic-based configuration management
+- `container.py`: Dependency injection container setup
+
+**AWS Integrations** (`aws/`):
+- `secret_reader.py`: AWS Secrets Manager integration
+- `parameter_store_reader.py`: AWS Parameter Store integration
+
+#### **Presentation Layer** (`presentation/`)
+**Purpose**: Handles HTTP API concerns and external communication
+
+**API** (`api/`):
+- `conversation_router.py`: FastAPI route definitions
+- HTTP request/response handling
+- Dependency injection integration
+
+**Schemas** (`schemas/`):
+- `conversation_schemas.py`: Pydantic models for API contracts
+- Request/response validation
+- OpenAPI documentation generation
+
+### **Architectural Principles Demonstrated**
+
+#### **1. Dependency Inversion Principle**
+```
+Domain (interfaces) ← Infrastructure (implementations)
+```
+- Domain defines interfaces, infrastructure implements them
+- Business logic doesn't depend on external frameworks
+
+#### **2. Single Responsibility Principle**
+- Each module has one clear purpose
+- Services handle specific business concerns
+- Adapters handle specific external integrations
+
+#### **3. Open/Closed Principle**
+- Easy to add new implementations (new LLM providers, storage backends)
+- Core business logic remains unchanged when adding features
+
+#### **4. Interface Segregation**
+- Small, focused interfaces (AgentService, GuardrailService, etc.)
+- Clients depend only on methods they use
+
+### **File Organization Benefits**
+
+#### **Maintainability**
+- Clear separation makes code easy to locate and modify
+- Changes to external systems isolated to infrastructure layer
+- Business logic changes isolated to domain layer
+
+#### **Testability**
+- Domain layer can be tested without external dependencies
+- Infrastructure adapters can be mocked easily
+- Clear boundaries enable focused unit testing
+
+#### **Scalability**
+- Easy to swap implementations (memory → database storage)
+- New features added without modifying existing code
+- Microservice extraction possible along layer boundaries
+
 ## Clean Architecture Overview
 
 ```mermaid
